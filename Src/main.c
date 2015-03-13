@@ -42,6 +42,7 @@
 #include "gpio.h"
 #include "kinput.h"
 #include "hid.h"
+#include "usbh_adk_core.h"
 
 /* Private variables ---------------------------------------------------------*/
 

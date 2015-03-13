@@ -20,7 +20,7 @@ static void restore_debug_defaults(void) {
 
   int i;
 
-  debug_hal_hcd_hc_submitrequest_print = DEBUG_HAL_HCD_HC_SUBMITREQUEST_DEFAULT;
+  debug_hal_hcd_hc_submitrequest_print = 0;//DEBUG_HAL_HCD_HC_SUBMITREQUEST_DEFAULT;
   debug_usbh_allocpipe = DEBUG_USBH_ALLOCPIPE_DEFAULT;
 
   for (i = 0; i < 16; i++) {
