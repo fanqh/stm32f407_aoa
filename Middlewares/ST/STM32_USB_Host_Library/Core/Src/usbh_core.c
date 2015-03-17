@@ -38,27 +38,31 @@
 #define USBH_ADDRESS_ASSIGNED                   1
 #define USBH_MPS_DEFAULT                        0x40
 
-#define USBH_ILLEGAL_SE(s, e)					printf(NEW_LINE); 												        \
-												printf("USBH ILLEGAL state/event combination encountered. "); 	\
-												USBH_LogSE(s, e); 												                      \
-												printf(NEW_LINE);
+#define USBH_ERRORSTATE(s, e)                   printf(NEW_LINE "!!! ERROR STATE: %d" NEW_LINE, __LINE__);  \
+                                                USBH_DebugOutput(s, e, 1);                                  \
+                                                printf(NEW_LINE NEW_LINE);
 
 #define USBH_DEBOUNCE_DELAY                     200
+#define USBH_RESET_DURATION                     15
 #define USBH_ATTACH_DELAY                       200
 
-#define SIZE_OF_ARRAY(array)                    (sizeof(array) /  sizeof(array[0]))
+#define SIZE_OF_ARRAY(array)                    (sizeof(array) / sizeof(array[0]))
 
-
+extern USBH_StatusTypeDef USBH_AOA_Handshake(USBH_HandleTypeDef * phost);
 
 /*
  * local constants
  */
 const static char* event_string[] =
-{ "USBH_LL_EVT_NULL", "USBH_LL_EVT_CONNECT", "USBH_LL_EVT_DISCONNECT",
-    "USBH_LL_EVT_PORTUP", "USBH_LL_EVT_PORTDOWN", "USBH_LL_EVT_OVERFLOW",
-    "USBH_LL_EVT_HCINT" };
+{ "USBH_EVT_NULL", "USBH_EVT_CONNECT", "USBH_EVT_DISCONNECT",
+    "USBH_EVT_PORTUP", "USBH_EVT_PORTDOWN", "USBH_EVT_OVERFLOW",
+    "USBH_EVT_HCINT" };
 
-const static char* state_string[] =
+const static char* pstate_string[] =
+{ "PORT_IDLE", "PORT_DEBOUNCE", "PORT_RESET", "PORT_WAIT_ATTACHMENT",
+    "PORT_UP_WAIT", "PORT_UP", "PORT_DOWN", "PORT_DISCONNECT_DELAY" };
+
+const static char* gstate_string[] =
 { "HOST_IDLE", "HOST_DEV_WAIT_FOR_ATTACHMENT", "HOST_DEV_ATTACHED",
     "HOST_DEV_DISCONNECTED", "HOST_DETECT_DEVICE_SPEED", "HOST_ENUMERATION",
     "HOST_CLASS_REQUEST", "HOST_INPUT", "HOST_SET_CONFIGURATION",
@@ -79,50 +83,85 @@ const static char* control_state_string[] =
     "CTRL_DATA_IN_WAIT", "CTRL_DATA_OUT", "CTRL_DATA_OUT_WAIT",
     "CTRL_STATUS_IN", "CTRL_STATUS_IN_WAIT", "CTRL_STATUS_OUT",
     "CTRL_STATUS_OUT_WAIT", "CTRL_ERROR", "CTRL_STALLED", "CTRL_COMPLETE" };
+/**
+  * @brief  URB States definition
+  */
+const static char * urb_state_string[] =
+{ "URB_IDLE", // = 0,
+    "URB_DONE", "URB_NOTREADY", "URB_NYET", "URB_ERROR", "URB_STALL" };
+
+/**
+  * @brief  Host channel States  definition
+  */
+const static char * channel_state_string[] =
+{ "HC_IDLE", "HC_XFRC", "HC_HALTED", "HC_NAK", "HC_NYET", "HC_STALL",
+    "HC_XACTERR", "HC_BBLERR", "HC_DATATGLERR" };
 
 /*
  * local functions
  */
-static void USBH_LogSE(USBH_HandleTypeDef* phost, USBH_LL_EventTypeDef event)
+
+/*
+ * @param force, forcefully print, otherwise successive same event print only once
+ */
+static void USBH_DebugOutput(USBH_HandleTypeDef* phost, USBH_EventTypeDef event, int force)
 {
-  static HOST_StateTypeDef s = -1;
+  static PORT_StateTypeDef ps = -1;
+  static HOST_StateTypeDef gs = -1;
   static ENUM_StateTypeDef es = -1;
   static CMD_StateTypeDef rs = -1;
   static CTRL_StateTypeDef cs = -1;
-  static USBH_LL_EventTypeDef e = {-1, 0};
+  static USBH_EventTypeDef e = {-1, 0};
+  static char time_strbuf[16];
 
-  /** print only once for successive state/event **/
-  if ((phost->gState == s) && (phost->EnumState == es)
-      && (phost->RequestState == rs) && (phost->Control.state == cs)
-      && (e.evt == event.evt))
-  {
-    return;
+  if (!force) {
+    /** print only once for successive state/event **/
+    if ((phost->pState == ps) &&
+        (phost->gState == gs) &&
+        (phost->EnumState == es) &&
+        (phost->RequestState == rs) &&
+        (phost->Control.state == cs) &&
+        (e.evt == event.evt))
+    {
+      return;
+    }
   }
 
-  s = phost->gState;
+  ps = phost->pState;
+  gs = phost->gState;
   es = phost->EnumState;
   rs = phost->RequestState;
   cs = phost->Control.state;
   e.evt = event.evt;
+  e.timestamp = event.timestamp;
 
-  if (s < SIZE_OF_ARRAY(state_string) &&
+  if (ps < SIZE_OF_ARRAY(pstate_string) &&
+      gs < SIZE_OF_ARRAY(gstate_string) &&
       es < SIZE_OF_ARRAY(enum_state_string) &&
       rs < SIZE_OF_ARRAY(request_state_string) &&
       cs < SIZE_OF_ARRAY(control_state_string) &&
       e.evt < SIZE_OF_ARRAY(event_string))
   {
-    USBH_UsrLog("- s %s, es %s, rs %s, cs %s, e %s @ %08u ",
-        state_string[s],
+    if (e.evt == USBH_EVT_NULL) {
+      time_strbuf[0] = '\0';
+    }
+    else {
+      snprintf(time_strbuf, 16, "@ %08u", (unsigned int)e.timestamp);
+    }
+
+    USBH_UsrLog("- %s, %s, %s, %s, %s, %s %s",
+        pstate_string[ps],
+        gstate_string[gs],
         enum_state_string[es],
         request_state_string[rs],
         control_state_string[cs],
         event_string[e.evt],
-        (unsigned int )e.timestamp);
+        time_strbuf);
   }
   else
   {
     USBH_UsrLog("!!!! Illegal USBH States, s %d, es %d, rs %d, cs %d, e %d @ %010u",
-        s, es, rs, cs, e.evt, (unsigned int )e.timestamp);
+        gs, es, rs, cs, e.evt, (unsigned int )e.timestamp);
   }
 }
 
@@ -179,66 +218,93 @@ for (i = 0; i < bNumInterfaces; i++) {
 
 }
 
+void hcint2string(char* buf, uint32_t hcint)
+{
+  int i ;
 
+  static const char* name[] =
+  { "XFRC", "CHH", "AHBERR", "STALL", "NAK", "ACK", "NYET", "TXERR", "BBERR",
+      "FRMOR", "DTERR" };
+
+  for (i = 0; i < 11; i++) {
+
+    if (hcint & (1 << i)) {
+      strcpy(buf, name[i]);
+      buf += strlen(name[i]);
+      *buf = ' ';
+      buf ++;
+    }
+  }
+
+  /* remove last space */
+  if (strlen(buf) > 0) {
+    buf--;
+    *buf = 0;
+  }
+}
 
 /*
  * a ring buffer for asynchronous USBH event
  *
  * TODO these data should be changed to struct, since each USB (HS, FS) need an instance
  */
-#define USBH_LL_EVENT_RING_SIZE				(256)
-static USBH_LL_EventTypeDef USBH_LL_Events[USBH_LL_EVENT_RING_SIZE] = { 0 };
+#define USBH_EVENT_RING_SIZE				(64)
+static USBH_EventTypeDef USBH_Events[USBH_EVENT_RING_SIZE] = { {0, 0, {0}} };
 static int get_event_index = 0;
 static int put_event_index = 0;
 
 static inline int next_event_index(int i) {
 
-	if (i == USBH_LL_EVENT_RING_SIZE - 1)
+	if (i == USBH_EVENT_RING_SIZE - 1)
 		return 0;
 
 	return ++i;
 }
 
-static USBH_LL_EventTypeDef USBH_GetEvent(void) {
+static USBH_EventTypeDef USBH_GetEvent(void) {
 
-	USBH_LL_EventTypeDef e;
+  USBH_EventTypeDef e;
 
 	if (get_event_index == put_event_index) {
-		e.evt = USBH_LL_EVT_NULL;
+		e.evt = USBH_EVT_NULL;
 		e.timestamp = 0;
 		return e;
 	}
 
-	e = USBH_LL_Events[get_event_index];
-	USBH_LL_Events[get_event_index].evt = 0;
-	USBH_LL_Events[get_event_index].timestamp = 0;
+	e = USBH_Events[get_event_index];
+	USBH_Events[get_event_index].evt = 0;
+	USBH_Events[get_event_index].timestamp = 0;
 
 	get_event_index = next_event_index(get_event_index);
 
 	return e;
 }
 
-static void USBH_PutEvent(USBH_LL_EventTypeDef e) {
+static void USBH_PutEvent(USBH_EventTypeDef e) {
 
 	int i;
 	if (next_event_index(put_event_index) == get_event_index) {
 
-		for (i = 0; i < USBH_LL_EVENT_RING_SIZE; i++)
-			USBH_LL_Events[i].evt = USBH_LL_EVT_OVERFLOW;
+		for (i = 0; i < USBH_EVENT_RING_SIZE; i++)
+			USBH_Events[i].evt = USBH_EVT_OVERFLOW;
 
 		return;
 	}
 
-	USBH_LL_Events[put_event_index] = e;
+	USBH_Events[put_event_index] = e;
 	put_event_index = next_event_index(put_event_index);
 }
 
 /** @defgroup USBH_CORE_Private_Functions
   * @{
   */ 
+static USBH_StatusTypeDef  USBH_HandlePortUp(USBH_HandleTypeDef *phost);
+static USBH_StatusTypeDef  USBH_HandlePortDown(USBH_HandleTypeDef *phost);
+
 static USBH_StatusTypeDef  USBH_HandleEnum    (USBH_HandleTypeDef *phost);
 static void                USBH_HandleSof     (USBH_HandleTypeDef *phost);
-static USBH_StatusTypeDef  DeInitStateMachine(USBH_HandleTypeDef *phost);
+static USBH_StatusTypeDef  DeInitGStateMachine(USBH_HandleTypeDef *phost);
+static USBH_StatusTypeDef  DeInitPStateMachine(USBH_HandleTypeDef *phost);
 
 #if (USBH_USE_OS == 1)  
 static void USBH_Process_OS(void const * argument);
@@ -268,7 +334,7 @@ USBH_StatusTypeDef  USBH_Init(USBH_HandleTypeDef *phost, void (*pUsrFunc)(USBH_H
   phost->ClassNumber = 0;
   
   /* Restore default states and prepare EP0 */ 
-  DeInitStateMachine(phost);
+  DeInitPStateMachine(phost);
   
   /* Assign User process */
   if(pUsrFunc != NULL)
@@ -304,7 +370,7 @@ USBH_StatusTypeDef  USBH_Init(USBH_HandleTypeDef *phost, void (*pUsrFunc)(USBH_H
   */
 USBH_StatusTypeDef  USBH_DeInit(USBH_HandleTypeDef *phost)
 {
-  DeInitStateMachine(phost);
+  DeInitPStateMachine(phost);
   
   if(phost->pData != NULL)
   {
@@ -321,7 +387,7 @@ USBH_StatusTypeDef  USBH_DeInit(USBH_HandleTypeDef *phost)
   * @param  phost: Host Handle
   * @retval USBH Status
   */
-static USBH_StatusTypeDef  DeInitStateMachine(USBH_HandleTypeDef *phost)
+static USBH_StatusTypeDef  DeInitGStateMachine(USBH_HandleTypeDef *phost)
 {
   uint32_t i = 0;
 
@@ -351,6 +417,17 @@ static USBH_StatusTypeDef  DeInitStateMachine(USBH_HandleTypeDef *phost)
   phost->device.address = USBH_ADDRESS_DEFAULT;
   phost->device.speed   = USBH_SPEED_FULL;
   
+  return USBH_OK;
+}
+
+/*
+ * This function also reset port state
+ */
+static USBH_StatusTypeDef  DeInitPStateMachine(USBH_HandleTypeDef *phost)
+{
+  DeInitGStateMachine(phost);
+  phost->pState = PORT_IDLE;
+
   return USBH_OK;
 }
 
@@ -521,8 +598,8 @@ USBH_StatusTypeDef  USBH_Stop   (USBH_HandleTypeDef *phost)
   USBH_LL_DriverVBUS (phost, FALSE);
   
   /* FRee Control Pipes */
-  USBH_FreePipe  (phost, phost->Control.pipe_in);
-  USBH_FreePipe  (phost, phost->Control.pipe_out);  
+//  USBH_FreePipe  (phost, phost->Control.pipe_in);
+//  USBH_FreePipe  (phost, phost->Control.pipe_out);
   
   return USBH_OK;  
 }
@@ -542,7 +619,7 @@ USBH_StatusTypeDef  USBH_ReEnumerate   (USBH_HandleTypeDef *phost)
   USBH_Delay(200);
   
   /* Set State machines in default state */
-  DeInitStateMachine(phost);
+  DeInitGStateMachine(phost);
    
   /* Start again the host */
   USBH_Start(phost);
@@ -553,55 +630,9 @@ USBH_StatusTypeDef  USBH_ReEnumerate   (USBH_HandleTypeDef *phost)
   return USBH_OK;  
 }
 
-void hcint2string(char* buf, uint32_t hcint)
-{
-  int i ;
 
-  static const char* name[] =
-  { "XFRC", "CHH", "AHBERR", "STALL", "NAK", "ACK", "NYET", "TXERR", "BBERR",
-      "FRMOR", "DTERR" };
 
-  for (i = 0; i < 11; i++) {
 
-    if (hcint & (1 << i)) {
-      strcpy(buf, name[i]);
-      buf += strlen(name[i]);
-      *buf = ' ';
-      buf ++;
-    }
-  }
-
-  if (strlen(buf) > 0) {
-    *buf = 0;
-  }
-}
-
-/**
-  * @brief  URB States definition
-  */
-const char * urb_state_string[] = {
-  "URB_IDLE", // = 0,
-  "URB_DONE",
-  "URB_NOTREADY",
-  "URB_NYET",
-  "URB_ERROR",
-  "URB_STALL"
-}; //USB_OTG_URBStateTypeDef;
-
-/**
-  * @brief  Host channel States  definition
-  */
-const char * channel_state_string[] = {
-  "HC_IDLE", // = 0,
-  "HC_XFRC",
-  "HC_HALTED",
-  "HC_NAK",
-  "HC_NYET",
-  "HC_STALL",
-  "HC_XACTERR",
-  "HC_BBLERR",
-  "HC_DATATGLERR"
-}; //USB_OTG_HCStateTypeDef;
 
 /**
  * 	@brief	USBH_ProcessEvent
@@ -612,14 +643,14 @@ const char * channel_state_string[] = {
  */
 USBH_StatusTypeDef USBH_ProcessEvent(USBH_HandleTypeDef * phost)
 {
-  static USBH_LL_EventTypeDef e;
+  static USBH_EventTypeDef e;
 
   static char buf[128];
 
 pop:
   e = USBH_GetEvent();
 
-  if (e.evt == USBH_LL_EVT_HCINT) {
+  if (e.evt == USBH_EVT_HCINT) {
 
     memset(buf, 0, 128);
 
@@ -642,15 +673,169 @@ pop:
     goto pop;
   }
 
-  USBH_LogSE(phost, e);
+  USBH_DebugOutput(phost, e, 0);
+
+#if 1
+
+  switch (phost->pState) {
+  case PORT_IDLE:
+    if (e.evt == USBH_EVT_NULL) {
+    }
+    else if (e.evt == USBH_EVT_CONNECT) {
+      phost->pState = PORT_DEBOUNCE;
+      phost->pStateTimer = HAL_GetTick();
+      USBH_UsrLog("Debounce delay %dms before port reset", USBH_DEBOUNCE_DELAY);
+    }
+    else
+    {
+      USBH_ERRORSTATE(phost, e);
+    };
+    break;
+
+  case PORT_DEBOUNCE:
+    if (e.evt == USBH_EVT_NULL) {
+      if (HAL_GetTick() - phost->pStateTimer > USBH_DEBOUNCE_DELAY) {
+        phost->pState = PORT_RESET;
+
+        /** huge bug !!! **/
+        phost->pStateTimer = HAL_GetTick();
+        USBH_LL_ResetAssert(phost);
+        USBH_UsrLog("Assert USB port reset");
+      }
+    }
+    else if (e.evt == USBH_EVT_DISCONNECT) {
+      phost->pState = PORT_IDLE;
+    }
+    else {
+      USBH_ERRORSTATE(phost, e);
+    }
+    break;
+
+  case PORT_RESET:
+    if (e.evt == USBH_EVT_NULL) {
+      // TODO ASSERT connected
+      if (HAL_GetTick() - phost->pStateTimer > USBH_RESET_DURATION) {
+        USBH_LL_ResetDeassert(phost);
+        USBH_UsrLog("Deassert USB port reset");
+        phost->pState = PORT_WAIT_ATTACHMENT;
+        phost->pStateTimer = HAL_GetTick();
+      }
+    }
+    else if (e.evt == USBH_EVT_DISCONNECT) {
+      phost->pState = PORT_IDLE;
+    }
+    else {
+      USBH_ERRORSTATE(phost, e);
+    }
+    break;
+
+  case PORT_WAIT_ATTACHMENT:
+
+    if (e.evt == USBH_EVT_NULL) {
+      if (HAL_GetTick() - phost->pStateTimer > USBH_ATTACH_DELAY) {
+        // TODO timeout processing
+      }
+    }
+    else if (e.evt == USBH_EVT_PORTUP) {
+      phost->pState = PORT_UP_WAIT;
+      phost->pStateTimer = HAL_GetTick();
+    }
+    else if (e.evt == USBH_EVT_DISCONNECT) {
+      phost->pState = PORT_IDLE;
+    }
+    else {
+      USBH_ERRORSTATE(phost, e);
+    }
+    break;
+
+  case PORT_UP_WAIT:
+    if (e.evt == USBH_EVT_NULL) {
+      if (HAL_GetTick() - phost->pStateTimer > 10) {
+        phost->pState = PORT_UP;
+        USBH_HandlePortUp(phost);
+      }
+    }
+    else if (e.evt == USBH_EVT_PORTDOWN) {
+      phost->pState = PORT_DOWN;
+    }
+    else {
+      USBH_ERRORSTATE(phost, e);
+    }
+    break;
+
+  case PORT_UP:
+    if (e.evt == USBH_EVT_NULL) {
+      USBH_Process(phost);
+    }
+    else if (e.evt == USBH_EVT_PORTDOWN) {
+      USBH_HandlePortDown(phost);
+      phost->pState = PORT_DOWN;
+    }
+    else if (e.evt == USBH_EVT_CONNECT) {
+      // no way to deal with this event, not maskable either
+    }
+    else {
+      USBH_ERRORSTATE(phost, e);
+    }
+    break;
+
+  case PORT_DOWN:
+    if (e.evt == USBH_EVT_NULL) {
+      /*
+       * a bug states is observed several times for unreliable plug.
+       * with OTG_HS_HPRT as 0x00041801
+       *
+       * PCSTS = 1
+       * PCDET = 0
+       * PENA = 0
+       * PENCHGN = 0
+       *
+       * the port is indeed disabled but physical connection is present.
+       */
+      // TODO clear this bug, maybe detect it and then re-enumeration
+      if (USBH_LL_PortStale(phost)) {
+        phost->pState = PORT_RESET;   // try to reset again
+        USBH_LL_ResetAssert(phost);
+        phost->pStateTimer = HAL_GetTick();
+      }
+    }
+    else if (e.evt == USBH_EVT_DISCONNECT) {
+      phost->pState = PORT_DISCONNECT_DELAY;
+      phost->pStateTimer = HAL_GetTick();
+    }
+    else {
+      USBH_ERRORSTATE(phost, e);
+    }
+    break;
+
+  case PORT_DISCONNECT_DELAY:
+    if (e.evt == USBH_EVT_NULL) {
+      if (HAL_GetTick() - phost->pStateTimer > 500) {
+        // TODO disconnect stabilized
+        phost->pState = PORT_IDLE;
+      }
+    }
+    else if (e.evt == USBH_EVT_CONNECT) {
+      phost->pState = PORT_DEBOUNCE;
+    }
+    else if (e.evt == USBH_EVT_DISCONNECT) {
+      // Do nothing. It occurs occasionally.
+    }
+    else {
+      USBH_ERRORSTATE(phost, e);
+    }
+    break;
+  }
+
+#else
 
   switch (e.evt)
   {
-  case USBH_LL_EVT_NULL:
+  case USBH_EVT_NULL:
     USBH_Process(phost);
     break;
 
-  case USBH_LL_EVT_CONNECT:
+  case USBH_EVT_CONNECT:
 
     if (phost->gState == HOST_IDLE)
     {
@@ -667,7 +852,7 @@ pop:
 
     break;
 
-  case USBH_LL_EVT_DISCONNECT:
+  case USBH_EVT_DISCONNECT:
 
     /** the wild way **/
     // HAL_NVIC_SystemReset();
@@ -675,7 +860,7 @@ pop:
     switch (phost->gState)
     {
     case HOST_IDLE:
-      USBH_ILLEGAL_SE(phost, e);
+      USBH_ERRORSTATE(phost, e);
       break;
 
     case HOST_DEV_WAIT_FOR_ATTACHMENT:
@@ -715,7 +900,7 @@ pop:
       USBH_FreePipe(phost, phost->Control.pipe_out);
 
       USBH_Delay(100);
-      DeInitStateMachine(phost);
+      DeInitGStateMachine(phost);
 
       USBH_LL_Start(phost);
 
@@ -725,23 +910,23 @@ pop:
     }
     break;
 
-  case USBH_LL_EVT_PORTUP:
+  case USBH_EVT_PORTUP:
 
     switch (phost->gState)
     {
     case HOST_IDLE:
-      USBH_ILLEGAL_SE(phost, e);
+      USBH_ERRORSTATE(phost, e);
       break;
     case HOST_DEV_WAIT_FOR_ATTACHMENT:
       phost->gState = HOST_DEV_ATTACHED;
       break;
     default:
-      USBH_ILLEGAL_SE(phost, e);
+      USBH_ERRORSTATE(phost, e);
       break;
     }
     break;
 
-  case USBH_LL_EVT_PORTDOWN:
+  case USBH_EVT_PORTDOWN:
     switch (phost->gState)
     {
     case HOST_DEV_WAIT_FOR_ATTACHMENT:
@@ -756,7 +941,7 @@ pop:
     }
     break;
 
-  case USBH_LL_EVT_OVERFLOW:
+  case USBH_EVT_OVERFLOW:
     break;
 
   default:
@@ -769,11 +954,12 @@ pop:
   ILLEGAL_STATE:
 
   printf("ERROR STATE / EVENT combination !!!!!!!!!!!!");
-  USBH_ILLEGAL_SE(phost, e);
+  USBH_ERRORSTATE(phost, e);
+
+#endif
+
   return USBH_OK;
 }
-
-extern USBH_StatusTypeDef USBH_AOA_Handshake(USBH_HandleTypeDef * phost);
 
 /**
   * @brief  USBH_Process 
@@ -791,68 +977,68 @@ USBH_StatusTypeDef USBH_Process(USBH_HandleTypeDef *phost)
   case HOST_IDLE:
     break;
 
-  case HOST_DEV_WAIT_FOR_ATTACHMENT:
+//  case HOST_DEV_WAIT_FOR_ATTACHMENT:
+//
+//    if (phost->wait_for_attachment_substate == 0)
+//    { /** Debouncing **/
+//
+//      if (HAL_GetTick() - phost->PollingTimer > USBH_DEBOUNCE_DELAY)
+//      {
+//        phost->wait_for_attachment_substate = 1; /** switching substate **/
+//        phost->PollingTimer = HAL_GetTick();
+//        USBH_LL_ResetAssert(phost);
+//        USBH_UsrLog("Assert USB port reset");
+//      }
+//    }
+//    else if (phost->wait_for_attachment_substate == 1) /** resetting **/
+//    {
+//      if (HAL_GetTick() - phost->PollingTimer > 12)
+//      { /** 10 - 20ms conforming to standard **/
+//        USBH_LL_ResetDeassert(phost);
+//        USBH_UsrLog("Deassert USB port reset");
+//        phost->wait_for_attachment_substate = 2;
+//      }
+//    }
+//    else
+//    {
+//      // TODO waiting for port up event, need timeout mechanism
+//    }
+//    break;
 
-    if (phost->wait_for_attachment_substate == 0)
-    { /** Debouncing **/
-
-      if (HAL_GetTick() - phost->PollingTimer > USBH_DEBOUNCE_DELAY)
-      {
-        phost->wait_for_attachment_substate = 1; /** switching substate **/
-        phost->PollingTimer = HAL_GetTick();
-        USBH_LL_ResetAssert(phost);
-        USBH_UsrLog("Assert USB port reset");
-      }
-    }
-    else if (phost->wait_for_attachment_substate == 1) /** resetting **/
-    {
-      if (HAL_GetTick() - phost->PollingTimer > 12)
-      { /** 10 - 20ms conforming to standard **/
-        USBH_LL_ResetDeassert(phost);
-        USBH_UsrLog("Deassert USB port reset");
-        phost->wait_for_attachment_substate = 2;
-      }
-    }
-    else
-    {
-      // TODO waiting for port up event, need timeout mechanism
-    }
-    break;
-
-  case HOST_DEV_ATTACHED:
-
-    USBH_UsrLog("USB Device Attached")
-    ;
-
-    /* Wait for some time after Reset */
-    USBH_Delay(USBH_ATTACH_DELAY);
-
-    phost->device.speed = USBH_LL_GetSpeed(phost);
-
-    phost->gState = HOST_ENUMERATION;
-
-    /*
-     * USBH_AllocPipe ep_addr 0000 pipe 0
-     * USBH_AllocPipe ep_addr 0080 pipe 1
-     */
-    phost->Control.pipe_out = USBH_AllocPipe(phost, 0x00);
-    phost->Control.pipe_in = USBH_AllocPipe(phost, 0x80);
-
-    /* Open Control pipes */
-    USBH_OpenPipe(phost, phost->Control.pipe_in, 0x80, phost->device.address,
-        phost->device.speed,
-        USBH_EP_CONTROL, phost->Control.pipe_size);
-
-    /* Open Control pipes */
-    USBH_OpenPipe(phost, phost->Control.pipe_out, 0x00, phost->device.address,
-        phost->device.speed,
-        USBH_EP_CONTROL, phost->Control.pipe_size);
-
-#if (USBH_USE_OS == 1)
-    osMessagePut ( phost->os_event, USBH_PORT_EVENT, 0);
-#endif    
-
-    break;
+//  case HOST_DEV_ATTACHED:
+//
+//    USBH_UsrLog("USB Device Attached")
+//    ;
+//
+//    /* Wait for some time after Reset */
+//    USBH_Delay(USBH_ATTACH_DELAY);
+//
+//    phost->device.speed = USBH_LL_GetSpeed(phost);
+//
+//    phost->gState = HOST_ENUMERATION;
+//
+//    /*
+//     * USBH_AllocPipe ep_addr 0000 pipe 0
+//     * USBH_AllocPipe ep_addr 0080 pipe 1
+//     */
+//    phost->Control.pipe_out = USBH_AllocPipe(phost, 0x00);
+//    phost->Control.pipe_in = USBH_AllocPipe(phost, 0x80);
+//
+//    /* Open Control pipes */
+//    USBH_OpenPipe(phost, phost->Control.pipe_in, 0x80, phost->device.address,
+//        phost->device.speed,
+//        USBH_EP_CONTROL, phost->Control.pipe_size);
+//
+//    /* Open Control pipes */
+//    USBH_OpenPipe(phost, phost->Control.pipe_out, 0x00, phost->device.address,
+//        phost->device.speed,
+//        USBH_EP_CONTROL, phost->Control.pipe_size);
+//
+//#if (USBH_USE_OS == 1)
+//    osMessagePut ( phost->os_event, USBH_PORT_EVENT, 0);
+//#endif
+//
+//    break;
 
   case HOST_ENUMERATION:
     /* Check for enumeration status */
@@ -1021,20 +1207,22 @@ USBH_StatusTypeDef USBH_Process(USBH_HandleTypeDef *phost)
     }
     break;
 
-  case HOST_DEV_DISCONNECTED:
-
-    DeInitStateMachine(phost);
-
-    /* Re-Initilaize Host for new Enumeration */
-    if (phost->pActiveClass != NULL)
-    {
-      phost->pActiveClass->DeInit(phost);
-      phost->pActiveClass = NULL;
-    }
+//  case HOST_DEV_DISCONNECTED:
+//
+//    DeInitGStateMachine(phost);
+//
+//    /* Re-Initilaize Host for new Enumeration */
+//    if (phost->pActiveClass != NULL)
+//    {
+//      phost->pActiveClass->DeInit(phost);
+//      phost->pActiveClass = NULL;
+//    }
+//    break;
+  case HOST_ABORT_STATE:
     break;
 
-  case HOST_ABORT_STATE:
   default:
+    USBH_UsrLog("Unhandled host state: %s", gstate_string[phost->gState]);
     break;
   }
 
@@ -1259,28 +1447,8 @@ void  USBH_HandleSof  (USBH_HandleTypeDef *phost)
   */
 USBH_StatusTypeDef  USBH_LL_Connect  (USBH_HandleTypeDef *phost)
 {
-	USBH_LL_EventTypeDef e;
-// TODO move to main thread
-//  if(phost->gState == HOST_IDLE )
-//  {
-	phost->device.is_connected = 1;
-//    phost->gState = HOST_IDLE ;
-//
-    if(phost->pUser != NULL)
-    {
-      phost->pUser(phost, HOST_USER_CONNECTION);
-    }
-
-//  }
-//  else if(phost->gState == HOST_DEV_WAIT_FOR_ATTACHMENT )
-//  {
-//    phost->gState = HOST_DEV_ATTACHED ;
-//  }
-//#if (USBH_USE_OS == 1)
-//  osMessagePut ( phost->os_event, USBH_PORT_EVENT, 0);
-//#endif
-
-	e.evt = USBH_LL_EVT_CONNECT;
+	USBH_EventTypeDef e;
+	e.evt = USBH_EVT_CONNECT;
 	e.timestamp = HAL_GetTick();
 	USBH_PutEvent(e);
 	return USBH_OK;
@@ -1288,8 +1456,8 @@ USBH_StatusTypeDef  USBH_LL_Connect  (USBH_HandleTypeDef *phost)
 
 USBH_StatusTypeDef USBH_LL_PortUp (USBH_HandleTypeDef *phost)
 {
-	USBH_LL_EventTypeDef e;
-	e.evt = USBH_LL_EVT_PORTUP;
+	USBH_EventTypeDef e;
+	e.evt = USBH_EVT_PORTUP;
 	e.timestamp = HAL_GetTick();
 	USBH_PutEvent(e);
 	return USBH_OK;
@@ -1303,33 +1471,8 @@ USBH_StatusTypeDef USBH_LL_PortUp (USBH_HandleTypeDef *phost)
   */
 USBH_StatusTypeDef  USBH_LL_Disconnect  (USBH_HandleTypeDef *phost)
 {
-	/*Stop Host */
-	USBH_LL_Stop(phost);
-
-	/** free pipes in non-ISR to avoid racing condition. **/
-
-	/* FRee Control Pipes */
-//	USBH_FreePipe  (phost, phost->Control.pipe_in);
-//	USBH_FreePipe  (phost, phost->Control.pipe_out);
-
-	phost->device.is_connected = 0;
-
-	if(phost->pUser != NULL)
-	{
-		phost->pUser(phost, HOST_USER_DISCONNECTION);
-	}
-
-	/* Start the low level driver  */
-//	USBH_LL_Start(phost);
-//
-//  phost->gState = HOST_DEV_DISCONNECTED;
-//
-#if (USBH_USE_OS == 1)
-  osMessagePut ( phost->os_event, USBH_PORT_EVENT, 0);
-#endif
-
-	USBH_LL_EventTypeDef e;
-	e.evt = USBH_LL_EVT_DISCONNECT;
+	USBH_EventTypeDef e;
+	e.evt = USBH_EVT_DISCONNECT;
 	e.timestamp = HAL_GetTick();
 	USBH_PutEvent(e);
 	return USBH_OK;
@@ -1337,8 +1480,8 @@ USBH_StatusTypeDef  USBH_LL_Disconnect  (USBH_HandleTypeDef *phost)
 
 USBH_StatusTypeDef USBH_LL_PortDown (USBH_HandleTypeDef *phost)
 {
-	USBH_LL_EventTypeDef e;
-	e.evt = USBH_LL_EVT_PORTDOWN;
+	USBH_EventTypeDef e;
+	e.evt = USBH_EVT_PORTDOWN;
 	e.timestamp = HAL_GetTick();
 	USBH_PutEvent(e);
 	return USBH_OK;
@@ -1348,12 +1491,101 @@ USBH_StatusTypeDef USBH_LL_PortDown (USBH_HandleTypeDef *phost)
 
 USBH_StatusTypeDef USBH_LL_HCINT(USBH_HandleTypeDef *phost, struct hcint_t * hcint) {
 
-  USBH_LL_EventTypeDef e;
-  e.evt = USBH_LL_EVT_HCINT;
+  USBH_EventTypeDef e;
+  e.evt = USBH_EVT_HCINT;
   e.timestamp = HAL_GetTick();
   e.data.hcint = *hcint;
-
   USBH_PutEvent(e);
+  return USBH_OK;
+}
+
+/*****************************************************************************/
+/*
+ * This function setup communication pipes and kick start host gstate machine.
+ */
+static USBH_StatusTypeDef USBH_HandlePortUp(USBH_HandleTypeDef *phost)
+{
+
+  ASSERT(phost->pState == PORT_UP);
+  ASSERT(phost->gState == HOST_IDLE);
+
+  USBH_UsrLog("%s", __func__);
+
+  phost->device.speed = USBH_LL_GetSpeed(phost);
+  phost->gState = HOST_ENUMERATION;
+
+  /* Debug output:
+   * USBH_AllocPipe ep_addr 0000 pipe 0
+   * USBH_AllocPipe ep_addr 0080 pipe 1
+   */
+  phost->Control.pipe_out = USBH_AllocPipe(phost, 0x00);
+  phost->Control.pipe_in = USBH_AllocPipe(phost, 0x80);
+
+  /* Open Control pipes */
+  USBH_OpenPipe(phost, phost->Control.pipe_in, 0x80, phost->device.address,
+      phost->device.speed,
+      USBH_EP_CONTROL, phost->Control.pipe_size);
+
+  /* Open Control pipes */
+  USBH_OpenPipe(phost, phost->Control.pipe_out, 0x00, phost->device.address,
+      phost->device.speed,
+      USBH_EP_CONTROL, phost->Control.pipe_size);
+
+  /** this field is only meaningful for upper layer apps **/
+  phost->device.is_connected = 1;
+
+  /* do this here, instead in connection handler **/
+  if(phost->pUser != NULL)
+  {
+    phost->pUser(phost, HOST_USER_CONNECTION);
+  }
+
+#if (USBH_USE_OS == 1)
+    osMessagePut ( phost->os_event, USBH_PORT_EVENT, 0);
+#endif
+
+  return USBH_OK;
+}
+
+/*
+ *
+ */
+static USBH_StatusTypeDef  USBH_HandlePortDown(USBH_HandleTypeDef *phost) {
+
+  ASSERT(phost->pState == PORT_UP);
+  ASSERT(phost->gState != HOST_IDLE);
+
+  USBH_LL_Stop(phost);
+
+  /* Re-Initialize Host for new Enumeration */
+  if (phost->pActiveClass != NULL)
+  {
+    phost->pActiveClass->DeInit(phost);
+    phost->pActiveClass = NULL;
+  }
+
+  USBH_ClosePipe(phost, phost->Control.pipe_in);
+  USBH_ClosePipe(phost, phost->Control.pipe_out);
+
+  USBH_FreePipe(phost, phost->Control.pipe_in);
+  USBH_FreePipe(phost, phost->Control.pipe_out);
+
+  /** gstate -> HOST_IDLE **/
+  DeInitGStateMachine(phost);
+
+  phost->device.is_connected = 0;
+
+  if(phost->pUser != NULL)
+  {
+    phost->pUser(phost, HOST_USER_DISCONNECTION);
+  }
+
+  USBH_Delay(100);
+
+  USBH_LL_Start(phost);
+
+  restore_debug_defaults();
+
   return USBH_OK;
 }
 

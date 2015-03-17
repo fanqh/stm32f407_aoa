@@ -1171,11 +1171,11 @@ static inline void HCD_HC_OUT_IRQHandler  (HCD_HandleTypeDef *hhcd, uint8_t chnu
       else
       {
         hhcd->hc[chnum].urb_state = URB_NOTREADY;
+
+        /* re-activate the channel  */
+        USBx_HC(chnum)->HCCHAR &= ~USB_OTG_HCCHAR_CHDIS;
+        USBx_HC(chnum)->HCCHAR |= USB_OTG_HCCHAR_CHENA;
       }
-      
-      /* re-activate the channel  */
-      USBx_HC(chnum)->HCCHAR &= ~USB_OTG_HCCHAR_CHDIS;         
-      USBx_HC(chnum)->HCCHAR |= USB_OTG_HCCHAR_CHENA;      
     }
     
     __HAL_HCD_CLEAR_HC_INT(chnum, USB_OTG_HCINT_CHH);
@@ -1243,83 +1243,101 @@ static inline void HCD_RXQLVL_IRQHandler  (HCD_HandleTypeDef *hhcd)
 #elif defined (__GNUC__) /*!< GNU Compiler */
 #pragma GCC optimize ("O0")
 #endif /* __CC_ARM */
-static inline void HCD_Port_IRQHandler  (HCD_HandleTypeDef *hhcd)
+static inline void HCD_Port_IRQHandler(HCD_HandleTypeDef *hhcd)
 {
-  USB_OTG_GlobalTypeDef *USBx = hhcd->Instance;  
+  USB_OTG_GlobalTypeDef *USBx = hhcd->Instance;
   __IO uint32_t hprt0, hprt0_dup;
-  
+
   /* Handle Host Port Interrupts */
   hprt0 = USBx_HPRT0;
   hprt0_dup = USBx_HPRT0;
-  
+
   hprt0_dup &= ~(USB_OTG_HPRT_PENA | USB_OTG_HPRT_PCDET |\
-                 USB_OTG_HPRT_PENCHNG | USB_OTG_HPRT_POCCHNG );
-  
+      USB_OTG_HPRT_PENCHNG | USB_OTG_HPRT_POCCHNG);
+
   /* Check whether Port Connect Detected */
-  if((hprt0 & USB_OTG_HPRT_PCDET) == USB_OTG_HPRT_PCDET)
+  if ((hprt0 & USB_OTG_HPRT_PCDET) == USB_OTG_HPRT_PCDET)
   {
-	// These code may prevent CONNECT/DISCONNECT events in pair, a guess
-    if((hprt0 & USB_OTG_HPRT_PCSTS) == USB_OTG_HPRT_PCSTS)
+    // These code may prevent CONNECT/DISCONNECT events in pair, a guess
+    if ((hprt0 & USB_OTG_HPRT_PCSTS) == USB_OTG_HPRT_PCSTS)
     {
       //USB_MASK_INTERRUPT(hhcd->Instance, USB_OTG_GINTSTS_DISCINT);
       HAL_HCD_Connect_Callback(hhcd);
     }
-    hprt0_dup  |= USB_OTG_HPRT_PCDET;
+    hprt0_dup |= USB_OTG_HPRT_PCDET;
   }
-  
+
   /* Check whether Port Enable Changed */
-  if((hprt0 & USB_OTG_HPRT_PENCHNG) == USB_OTG_HPRT_PENCHNG)
+  if ((hprt0 & USB_OTG_HPRT_PENCHNG) == USB_OTG_HPRT_PENCHNG)
   {
     hprt0_dup |= USB_OTG_HPRT_PENCHNG;
 
-    if((hprt0 & USB_OTG_HPRT_PENA) == USB_OTG_HPRT_PENA)
-    {    
-      if(hhcd->Init.phy_itface  == USB_OTG_EMBEDDED_PHY)
+    if ((hprt0 & USB_OTG_HPRT_PENA) == USB_OTG_HPRT_PENA)
+    {
+      if (hhcd->Init.phy_itface == USB_OTG_EMBEDDED_PHY)
       {
         if ((hprt0 & USB_OTG_HPRT_PSPD) == (HPRT0_PRTSPD_LOW_SPEED << 17))
         {
-          USB_InitFSLSPClkSel(hhcd->Instance ,HCFG_6_MHZ );
+          USB_InitFSLSPClkSel(hhcd->Instance, HCFG_6_MHZ);
         }
         else
         {
-          USB_InitFSLSPClkSel(hhcd->Instance ,HCFG_48_MHZ );
+          USB_InitFSLSPClkSel(hhcd->Instance, HCFG_48_MHZ);
         }
       }
       else
       {
-        if(hhcd->Init.speed == HCD_SPEED_FULL)
+        if (hhcd->Init.speed == HCD_SPEED_FULL)
         {
-          USBx_HOST->HFIR = (uint32_t)60000;
+          USBx_HOST->HFIR = (uint32_t) 60000;
         }
       }
       // HAL_HCD_Connect_Callback(hhcd);
       // USB_MASK_INTERRUPT(hhcd->Instance, USB_OTG_GINTSTS_DISCINT);
       HAL_HCD_PortUp_Callback(hhcd);
-      
-      if(hhcd->Init.speed == HCD_SPEED_HIGH)
+
+      if (hhcd->Init.speed == HCD_SPEED_HIGH)
       {
-        USB_UNMASK_INTERRUPT(hhcd->Instance, USB_OTG_GINTSTS_DISCINT); 
+        USB_UNMASK_INTERRUPT(hhcd->Instance, USB_OTG_GINTSTS_DISCINT);
       }
     }
     else
     {
       /* Cleanup HPRT */
       USBx_HPRT0 &= ~(USB_OTG_HPRT_PENA | USB_OTG_HPRT_PCDET |\
-        USB_OTG_HPRT_PENCHNG | USB_OTG_HPRT_POCCHNG );
-      
+          USB_OTG_HPRT_PENCHNG | USB_OTG_HPRT_POCCHNG);
+
       HAL_HCD_PortDown_Callback(hhcd);
       // USB_UNMASK_INTERRUPT(hhcd->Instance, USB_OTG_GINTSTS_DISCINT);
-    }    
+    }
   }
-  
+
   /* Check For an overcurrent */
-  if((hprt0 & USB_OTG_HPRT_POCCHNG) == USB_OTG_HPRT_POCCHNG)
+  if ((hprt0 & USB_OTG_HPRT_POCCHNG) == USB_OTG_HPRT_POCCHNG)
   {
     hprt0_dup |= USB_OTG_HPRT_POCCHNG;
   }
 
   /* Clear Port Interrupts */
   USBx_HPRT0 = hprt0_dup;
+}
+
+/*
+ * a port is stale when:
+ *
+ * PENA = 0, PENCHNG = 0, PCDET = 0, PCSTS = 1
+ *
+ * that is, it won't issue interrupts anymore, with port disabled and connected.
+ */
+unsigned int HAL_HCD_PortStale(HCD_HandleTypeDef *hhcd)
+{
+  USB_OTG_GlobalTypeDef *USBx = hhcd->Instance;
+
+  uint32_t hprt = USBx_HPRT0;
+  if ((hprt & 0x0000000F) == 0x00000001)
+    return 1;
+
+  return 0;
 }
 
 /**

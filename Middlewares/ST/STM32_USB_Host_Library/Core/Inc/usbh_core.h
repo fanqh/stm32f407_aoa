@@ -95,14 +95,14 @@
  * Event (interrupt) type
  */
 typedef enum {
-    USBH_LL_EVT_NULL = 0,
-    USBH_LL_EVT_CONNECT,
-    USBH_LL_EVT_DISCONNECT,
-    USBH_LL_EVT_PORTUP,
-    USBH_LL_EVT_PORTDOWN,
-    USBH_LL_EVT_OVERFLOW,
-    USBH_LL_EVT_HCINT
-} USBH_LL_EventEnumTypeDef;
+    USBH_EVT_NULL = 0,
+    USBH_EVT_CONNECT,
+    USBH_EVT_DISCONNECT,
+    USBH_EVT_PORTUP,
+    USBH_EVT_PORTDOWN,
+    USBH_EVT_OVERFLOW,
+    USBH_EVT_HCINT
+} USBH_EventTypeTypeDef;
 
 struct hcint_t {
 
@@ -122,6 +122,7 @@ struct hcint_t {
 
 typedef union {
 
+  uint32_t init;
   struct hcint_t hcint;
 
 
@@ -131,10 +132,10 @@ typedef union {
  * Event type with time stamp
  */
 typedef struct {
-    USBH_LL_EventEnumTypeDef    evt;
+    USBH_EventTypeTypeDef       evt;
     uint32_t                    timestamp;
     USBH_LL_EventData           data;
-} USBH_LL_EventTypeDef;
+} USBH_EventTypeDef;
 
   
 USBH_StatusTypeDef  USBH_Init(USBH_HandleTypeDef *phost, void (*pUsrFunc)(USBH_HandleTypeDef *phost, uint8_t ), uint8_t id);
@@ -195,6 +196,9 @@ void                 USBH_LL_IncTimer     (USBH_HandleTypeDef *phost);
 /**
   * @}
   */ 
+
+unsigned int  USBH_LL_PortStale(USBH_HandleTypeDef *phost);
+
 
 #endif /* __CORE_H */
 /**
