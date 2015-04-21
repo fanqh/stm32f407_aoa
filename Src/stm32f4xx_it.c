@@ -136,7 +136,7 @@ void OTG_HS_IRQHandler(void)
 void VBUS_OVFLAG_IRQHandler(void)
 {
 	HAL_NVIC_ClearPendingIRQ(VBUS_OVFLAG_IRQ);
-	HAL_NVIC_ClearPendingIRQ(VBUS_OVFLAG_IRQ);
+	//todo the work
 }
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -86,7 +86,11 @@ void MX_GPIO_Init(void)
 
   VBUS_Switch_Gpio_Init();
   Boost5V_Gpio_Init();
+  Vbus_OverflowFlag_Gpio_Init();
+  Vbus_Detect_Init();
 
+  Boost5V_Gpio_Init();
+  Enable_VUSB_Switch();
 }
 
 void VBUS_Switch_Gpio_Init(void)
@@ -131,6 +135,21 @@ void Disable_Boost5V(void)
 	HAL_GPIO_WritePin(BOOST5V_PORT, BOOST5V_GPIO, GPIO_PIN_RESET);
 }
 
+void Vbus_Detect_Init(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct;
+  /*Configure GPIO pin : PC3 */
+  VBUS_DETECT_GPIO_CLK_ENABLE();
+  GPIO_InitStruct.Pin = VBUS_DETECT_GPIO;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(VBUS_DETECT_PORT, &GPIO_InitStruct);
+}
+
+GPIO_PinState Vbus_Short_Detect(void)
+{
+	 return HAL_GPIO_ReadPin(VBUS_DETECT_PORT, VBUS_DETECT_GPIO);
+}
 void Vbus_OverflowFlag_Gpio_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct;
@@ -143,7 +162,17 @@ void Vbus_OverflowFlag_Gpio_Init(void)
 
   /* Enable and set EXTI Line0 Interrupt to the lowest priority */
   HAL_NVIC_SetPriority(VBUS_OVFLAG_IRQ, 2, 0);
-//  HAL_NVIC_EnableIRQ(VBUS_OVFLAG_IRQHandler);
+  HAL_NVIC_EnableIRQ(VBUS_OVFLAG_IRQ);
+}
+
+void Vbus_OverflowIrq(void)
+{
+	if(GPIO_PIN_RESET==Vbus_Short_Detect())
+	{
+		Disable_Boost5V();
+		printf("5v is shorted with GND\r\n");
+	}
+	Disable_VBUS_Switch();
 }
 
 /* USER CODE BEGIN 2 */

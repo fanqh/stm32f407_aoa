@@ -54,10 +54,15 @@
  #define   BOOST5V_PORT   							 GPIOC
  #define   BOOST5V_GPIO_CLK_ENABLE()    __GPIOC_CLK_ENABLE()
 
+ //VBUS detect GPIO  PC4
+  #define   VBUS_DETECT_GPIO                 GPIO_PIN_4
+  #define   VBUS_DETECT_PORT   							 GPIOC
+  #define   VBUS_DETECT_GPIO_CLK_ENABLE()    __GPIOC_CLK_ENABLE()
+
  //TPS63010 Enable GPIO  PC1
  #define   VBUS_OVFLAG_GPIO                 GPIO_PIN_3
- #define   VBUS_OVFLAG_PORT   						 GPIOC
- #define   VBUS_OVFLAG__CLK_ENABLE()    	   __GPIOC_CLK_ENABLE()
+ #define   VBUS_OVFLAG_PORT   						  GPIOC
+ #define   VBUS_OVFLAG__CLK_ENABLE()    	  __GPIOC_CLK_ENABLE()
  #define   VBUS_OVFLAG_IRQ                  EXTI3_IRQn
  #define   VBUS_OVFLAG_IRQHandler           EXTI3_IRQHandler
 void MX_GPIO_Init(void);
@@ -67,6 +72,8 @@ void Boost5V_Gpio_Init(void);
 void Enable_Boost5V(void);
 void Disable_Boost5V(void);
 void Vbus_OverflowFlag_Gpio_Init(void);
+GPIO_PinState Vbus_Short_Detect(void);
+void Vbus_Detect_Init(void);
 #ifdef __cplusplus
 }
 #endif
