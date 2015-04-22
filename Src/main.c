@@ -125,10 +125,10 @@ int main(void)
     uart_hl_print();
     Process_Command();
     MX_USB_HOST_Process();
-    #if 0
+
     Scanner_Handle();
     Battery_Process();
-
+ #if 0
     if(version==Get_IC_Version())
     {
     	printf("LC709203f version is %X\r\n", version);
