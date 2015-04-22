@@ -1,5 +1,6 @@
 #include "lc709203.h"
 
+#if 0
 uint16_t Get_IC_Version(void)
 {
 //	HAL_StatusTypeDef HAL_I2C_Master_Transmit(I2C_HandleTypeDef *hi2c, uint16_t DevAddress, uint8_t *pData, uint16_t Size, uint32_t Timeout);
@@ -19,4 +20,10 @@ uint16_t Get_IC_Version(void)
 	}
 	return 0;
 }
+#endif
 
+
+void LC709203f_Read(uint8_t add, uint8_t command, uint8_t* pata, uint8_t len)
+{
+
+}

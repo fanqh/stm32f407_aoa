@@ -111,9 +111,9 @@ int main(void)
   Scanner_Init();
   PWM_Init();
   ADC_Init();
-  I2C_Init();
-  Time2_Delay_Init ();
-  Time2_mDelay(1000);
+//  I2C_Init();
+ // Time2_Delay_Init ();
+//  Time2_mDelay(1000);
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -125,9 +125,10 @@ int main(void)
     uart_hl_print();
     Process_Command();
     MX_USB_HOST_Process();
+    #if 0
     Scanner_Handle();
     Battery_Process();
-#if 1
+
     if(version==Get_IC_Version())
     {
     	printf("LC709203f version is %X\r\n", version);

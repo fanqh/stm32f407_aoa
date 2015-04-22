@@ -90,12 +90,12 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_SET);
 #endif
 
+  Boost5V_Gpio_Init();
   VBUS_Switch_Gpio_Init();
-  Boost5V_Gpio_Init();
-  Vbus_OverflowFlag_Gpio_Init();
   Vbus_Detect_Init();
+  Vbus_OverflowFlag_Gpio_Init();
 
-  Boost5V_Gpio_Init();
+  Enable_Boost5V();
   Enable_VUSB_Switch();
 }
 
