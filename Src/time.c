@@ -8,6 +8,97 @@ TIM_HandleTypeDef    TimHandle;
 
 /* Definition for TIMx's NVIC */
 #define TIMx_IRQn                      TIM2_IRQn
+#define TIM_USEC_DELAY									1
+#define TIM_MSEC_DELAY									2
+
+volatile uint32_t BSP_delay = 0;
+
+
+static void Time2_Delay(uint32_t nTime, uint8_t unit);
+static void Time2_SetTime(uint8_t unit);
+
+void Time2_Delay_Init ( void )
+{
+
+  /* Peripheral clock enable */
+  __TIM2_CLK_ENABLE();
+	  /*##-2- Configure the NVIC for TIMx ########################################*/
+	 /* Set Interrupt Group Priority */
+	HAL_NVIC_SetPriority(TIMx_IRQn, 4, 0);
+	 /* Enable the TIMx global Interrupt */
+	HAL_NVIC_EnableIRQ(TIMx_IRQn);
+
+}
+
+static void Time2_Delay(uint32_t nTime, uint8_t unit)
+{
+
+  BSP_delay = nTime;
+  Time2_SetTime(unit);
+  while(BSP_delay != 0);
+  HAL_TIM_Base_Stop_IT(&htim2);
+}
+
+void Time2_uDelay (const uint32_t usec)
+{
+
+  Time2_Delay(usec,TIM_USEC_DELAY);
+}
+/**
+  * @brief  USB_OTG_BSP_mDelay
+  *          This function provides delay time in milli sec
+  * @param  msec : Value of delay required in milli sec
+  * @retval None
+  */
+void Time2_mDelay (const uint32_t msec)
+{
+    Time2_Delay(msec,TIM_MSEC_DELAY);
+}
+
+static void Time2_SetTime(uint8_t unit)
+{
+  TIM_ClockConfigTypeDef sClockSourceConfig;
+
+  htim2.Instance = TIM2;
+  if(unit==TIM_USEC_DELAY)
+  {
+  	htim2.Init.Prescaler = 84 - 1;	  //1us
+  	htim2.Init.Period = 1-1;			  //1us
+  }
+  else if(unit == TIM_MSEC_DELAY)
+  {
+  	htim2.Init.Prescaler = 84 - 1;	  //1us
+  	htim2.Init.Period = 1000-1;			  //1mS
+  }
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.RepetitionCounter = 0;
+  HAL_TIM_Base_Init(&htim2);
+
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig);
+  HAL_TIM_Base_Start_IT(&htim2);
+
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	if(htim == &htim2)
+	{
+    if (BSP_delay > 0x00)
+    {
+      BSP_delay--;
+    }
+    else
+    {
+    	HAL_TIM_Base_Stop_IT(&htim2);
+    }
+	}
+}
+
+
+
+#if 0
 
 void time2_init(void)
 {
@@ -83,6 +174,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	TimeCount ++;
 }
 
+
+#endif
 
 void StartTimeCount(void)
 {

@@ -46,6 +46,8 @@
 #include "version.h"
 #include "time.h"
 #include "adc.h"
+#include "lc709203.h"
+#include "i2c.h"
 
 /* Private variables ---------------------------------------------------------*/
 
@@ -66,7 +68,7 @@ extern void initialise_monitor_handles(void);
 static char hello[] = "================ System Starts ================";
 static char world[] = "Copyright 2015 Actnova, Inc.";
 
-uint16_t vol;
+uint16_t version;
 
 int main(void)
 {
@@ -109,6 +111,9 @@ int main(void)
   Scanner_Init();
   PWM_Init();
   ADC_Init();
+  I2C_Init();
+  Time2_Delay_Init ();
+  Time2_mDelay(1000);
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -122,8 +127,14 @@ int main(void)
     MX_USB_HOST_Process();
     Scanner_Handle();
     Battery_Process();
+#if 1
+    if(version==Get_IC_Version())
+    {
+    	printf("LC709203f version is %X\r\n", version);
+    	HAL_Delay(500);
+    }
 
-
+#endif
   }
   /* USER CODE END 3 */
 

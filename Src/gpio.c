@@ -36,6 +36,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "gpio.h"
 #include "stm32f4xx_it.h"
+#include "stdio.h"
 /* USER CODE BEGIN 0 */
 
 
@@ -57,6 +58,11 @@
 */
 void MX_GPIO_Init(void)
 {
+  __GPIOH_CLK_ENABLE();
+  __GPIOA_CLK_ENABLE();
+  __GPIOB_CLK_ENABLE();
+  __GPIOC_CLK_ENABLE();
+  __GPIOD_CLK_ENABLE();
 #if 0
   GPIO_InitTypeDef GPIO_InitStruct;
 

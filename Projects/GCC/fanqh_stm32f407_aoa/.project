@@ -75,6 +75,11 @@
 			<locationURI>PARENT-3-PROJECT_LOC/Inc/i2c.h</locationURI>
 		</link>
 		<link>
+			<name>Inc/lc709203.h</name>
+			<type>1</type>
+			<locationURI>PARENT-3-PROJECT_LOC/Inc/lc709203.h</locationURI>
+		</link>
+		<link>
 			<name>Inc/scan.h</name>
 			<type>1</type>
 			<locationURI>PARENT-3-PROJECT_LOC/Inc/scan.h</locationURI>
@@ -138,6 +143,11 @@
 			<name>Src/i2c.c</name>
 			<type>1</type>
 			<locationURI>PARENT-3-PROJECT_LOC/Src/i2c.c</locationURI>
+		</link>
+		<link>
+			<name>Src/lc709203.c</name>
+			<type>1</type>
+			<locationURI>PARENT-3-PROJECT_LOC/Src/lc709203.c</locationURI>
 		</link>
 		<link>
 			<name>Src/main.c</name>
@@ -350,6 +360,16 @@
 			<locationURI>PARENT-3-PROJECT_LOC/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_hcd.h</locationURI>
 		</link>
 		<link>
+			<name>Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_i2c.h</name>
+			<type>1</type>
+			<locationURI>PARENT-3-PROJECT_LOC/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_i2c.h</locationURI>
+		</link>
+		<link>
+			<name>Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_i2c_ex.h</name>
+			<type>1</type>
+			<locationURI>PARENT-3-PROJECT_LOC/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_i2c_ex.h</locationURI>
+		</link>
+		<link>
 			<name>Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h</name>
 			<type>1</type>
 			<locationURI>PARENT-3-PROJECT_LOC/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h</locationURI>
@@ -448,6 +468,16 @@
 			<name>Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_hcd_helper.c</name>
 			<type>1</type>
 			<locationURI>PARENT-3-PROJECT_LOC/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_hcd_helper.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c.c</name>
+			<type>1</type>
+			<locationURI>PARENT-3-PROJECT_LOC/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c_ex.c</name>
+			<type>1</type>
+			<locationURI>PARENT-3-PROJECT_LOC/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c_ex.c</locationURI>
 		</link>
 		<link>
 			<name>Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr.c</name>

@@ -8,6 +8,11 @@
 
 extern TIM_HandleTypeDef htim2;
 
+
+void Time2_Delay_Init ( void );
+void Time2_uDelay (const uint32_t usec);
+void Time2_mDelay (const uint32_t msec);
+
 void time2_init(void);
 void StartTimeCount(void);
 void StopTimeCount(void);

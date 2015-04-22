@@ -4,39 +4,23 @@
 
 #include "stm32f4xx_hal.h"
 
-#ifndef FALSE
-#define FALSE 0
-#endif
+#define I2Cx                             I2C2
+#define I2Cx_CLK_ENABLE()                __I2C2_CLK_ENABLE()
+#define I2Cx_SDA_GPIO_CLK_ENABLE()       __GPIOB_CLK_ENABLE()
+#define I2Cx_SCL_GPIO_CLK_ENABLE()       __GPIOB_CLK_ENABLE()
 
-#ifndef TRUE
-#define TRUE 1
-#endif
+#define I2Cx_FORCE_RESET()               __I2C2_FORCE_RESET()
+#define I2Cx_RELEASE_RESET()             __I2C2_RELEASE_RESET()
 
-//-------------------------------------IIC--------------------------------------
-#define IIC_PORT							GPIOB
-#define IIC_ENABLE()					__GPIOB_CLK_ENABLE()
-#define IIC_SDA_PIN					  GPIO_PIN_11
-#define IIC_SCL_PIN						GPIO_PIN_10
-
-
-#define IIC_SDA_PIN_L()					HAL_GPIO_WritePin(IIC_PORT, IIC_SDA_PIN, GPIO_PIN_RESET)
-#define IIC_SDA_PIN_H()					HAL_GPIO_WritePin(IIC_PORT, IIC_SDA_PIN, GPIO_PIN_SET)
-
-#define IIC_SCL_PIN_L()					HAL_GPIO_WritePin(IIC_PORT, IIC_SCL_PIN, GPIO_PIN_RESET)
-#define IIC_SCL_PIN_H()					HAL_GPIO_WritePin(IIC_PORT, IIC_SCL_PIN, GPIO_PIN_SET)
-
-#define IIC_SDA()               HAL_GPIO_ReadPin(IIC_PORT, IIC_SDA_PIN)
-
-//IIC所有操作函数
-void IIC_Init(void);                //初始化IIC的IO口
-uint8_t IICputc(uint8_t sla, uint8_t c);
-uint8_t IICwrite(uint8_t sla, uint8_t suba, uint8_t *s, uint8_t no);
-uint8_t IICwriteExt(uint8_t sla, uint8_t *s, uint8_t no);
-uint8_t IICgetc(uint8_t sla, uint8_t *c);
-uint8_t IICread(uint8_t sla, uint8_t suba, uint8_t *s, uint8_t no);
-uint8_t IICreadExt(uint8_t sla, uint8_t *s, uint8_t no);
-
-
+/* Definition for I2Cx Pins */
+#define I2Cx_SCL_PIN                    GPIO_PIN_10
+#define I2Cx_SCL_GPIO_PORT              GPIOB
+#define I2Cx_SCL_AF                     GPIO_AF4_I2C2
+#define I2Cx_SDA_PIN                    GPIO_PIN_11
+#define I2Cx_SDA_GPIO_PORT              GPIOB
+#define I2Cx_SDA_AF                     GPIO_AF4_I2C2
+extern I2C_HandleTypeDef I2cHandle;
+void I2C_Init(void);
 //////////////////////////////////////////////////////////////////////////////////	 
 #endif
 
