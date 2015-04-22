@@ -71,7 +71,7 @@ void Battery_Process(void)
 			BatteryInfor.vol = 3300 * HAL_ADC_GetValue(&AdcHandle) / 4096 *2;
 			BatteryInfor.pct = BatteryInfor.vol * 100 / 4200;
 
-			printf("vol = %d, pct= %d\r\n", BatteryInfor.vol, BatteryInfor.pct);
+//			printf("vol = %d, pct= %d\r\n", BatteryInfor.vol, BatteryInfor.pct);
 		}
 	}
 }

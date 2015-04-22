@@ -128,7 +128,7 @@ int main(void)
 
     Scanner_Handle();
     Battery_Process();
- #if 0
+#if 0
     if(version==Get_IC_Version())
     {
     	printf("LC709203f version is %X\r\n", version);
@@ -157,7 +157,11 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+#ifdef BAILIAN
   RCC_OscInitStruct.PLL.PLLM = 8;
+#else
+  RCC_OscInitStruct.PLL.PLLM = 25;
+#endif
   RCC_OscInitStruct.PLL.PLLN = 336;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 7;

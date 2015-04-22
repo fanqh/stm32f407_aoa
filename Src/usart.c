@@ -136,8 +136,8 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     __USART2_CLK_ENABLE();
   
     /**USART2 GPIO Configuration    
-    PA5     ------> USART2_TX
-    PA6     ------> USART2_RX
+    PA2     ------> USART2_TX
+    PA3     ------> USART2_RX
     */
     GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
