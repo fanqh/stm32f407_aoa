@@ -27,6 +27,23 @@
 
 #define IIC_SDA()               HAL_GPIO_ReadPin(I2Cx_SDA_GPIO_PORT, I2Cx_SDA_PIN)
 
+
+extern uint8_t ack;
+bool IICwrite(uint8_t sla, uint8_t suba, uint8_t *s, uint8_t no);
+bool IICwriteExt(uint8_t sla, uint8_t *s, uint8_t no);
+bool IICgetc(uint8_t sla, uint8_t *c);
+bool IICread(uint8_t sla, uint8_t suba, uint8_t *s, uint8_t no);
+bool IICreadExt(uint8_t sla, uint8_t *s, uint8_t no);
+
+
+void IIC_Start(void);
+void IIC_Stop(void);
+uint8_t IIC_Clock();
+void IIC_SendByte(uint8_t c);
+uint8_t IIC_RcvByte(void);
+void IIC_Ack(uint8_t a);
+bool IICputc(uint8_t sla, uint8_t c);
+
 void I2C_Init(void);
 //////////////////////////////////////////////////////////////////////////////////	 
 #endif

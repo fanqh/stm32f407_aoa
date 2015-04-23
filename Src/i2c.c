@@ -1,7 +1,7 @@
 #include "i2c.h"
 #include "time.h"
 
-static uint8_t ack;
+uint8_t ack;
 void I2C_Init(void)
 {
 	GPIO_InitTypeDef GPIO_InitStruct;
@@ -21,9 +21,9 @@ void IIC_Start(void)
 {
 	IIC_SDA_PIN_H();
 	IIC_SCL_PIN_H();
-	Time2_uDelay(9); //9
+	Time2_uDelay(20); //9
 	IIC_SDA_PIN_L();				//START:when CLK is high,DATA change form high to low
-	Time2_uDelay(9); //	9
+	Time2_uDelay(20); //	9
 	IIC_SCL_PIN_L();						  //钳住I2C总线，准备发送或接收数据
 }
 //----产生IIC停止信号-------------------------------------------------------------
@@ -31,20 +31,20 @@ void IIC_Stop(void)
 {
 	IIC_SCL_PIN_L();
 	IIC_SDA_PIN_L();					//STOP:when CLK is high DATA change form low to high
-	Time2_uDelay(9);	//9
+	Time2_uDelay(20);	//9
 	IIC_SCL_PIN_H();
-	Time2_uDelay(9);	//9
+	Time2_uDelay(20);	//9
 	IIC_SDA_PIN_H();	//发送I2C总线结束信号
-	Time2_uDelay(9);	//9
+	Time2_uDelay(20);	//9
 }
 //----一个SCL时钟----------------------------------------------------
 uint8_t IIC_Clock()
 {
 	uint8_t sample;
 
-	Time2_uDelay(9);   //9
+	Time2_uDelay(20);   //9
 	IIC_SCL_PIN_H();      		//置时钟线为高，通知被控器开始接收数据位
-	Time2_uDelay(9);		//保证时钟高电平周期大于4μs   9
+	Time2_uDelay(20);		//保证时钟高电平周期大于4μs   9
 	sample = IIC_SDA();					  //changed
 	IIC_SCL_PIN_L();
 	return sample;
@@ -72,7 +72,7 @@ void IIC_SendByte(uint8_t c)
 		ack = 1;
 }
 //----接收一个字节----------------------------------------------------
-uint8_t IIC_RcvByte()
+uint8_t IIC_RcvByte(void)
 {
 	uint8_t retc;
 	uint8_t BitCnt;

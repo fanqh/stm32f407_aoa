@@ -21,9 +21,63 @@ uint16_t Get_IC_Version(void)
 	return 0;
 }
 #endif
-
-
-void LC709203f_Read(uint8_t add, uint8_t command, uint8_t* pata, uint8_t len)
+#if 0
+uint16_t Get_IC_Version(void)
 {
 
+	struct{
+		uint16_t read;
+		uint8_t  crc;
+
+	}data;
+	if(IICread(LC709203F_ADDAR, IC_VERSION, (uint8_t*)&data, 3)==false)
+		IIC_Stop();          //结束总线
+
+	return (data.read);
+
 }
+#else
+
+unsigned char crc8_msb(unsigned char poly, unsigned char* data, int size)
+{
+	unsigned char crc = 0x00;
+	int bit;
+
+	while (size--) {
+		crc ^= *data++;
+		for (bit = 0; bit < 8; bit++) {
+			if (crc & 0x80) {
+				crc = (crc << 1) ^ poly;
+			} else {
+				crc <<= 1;
+			}
+		}
+	}
+
+	return crc;
+}
+
+uint16_t LC709203f_Read_Word(uint8_t addr, uint8_t cmd)
+{
+	struct{
+		uint16_t read;
+		uint8_t  crc;
+
+	}data;
+	if(IICread(LC709203F_ADDAR, cmd, (uint8_t*)&data, 3)==false)
+		IIC_Stop();          //结束总线
+	return (data.read);
+}
+
+bool LC709203f_Write_Word(uint8_t addr, uint8_t cmd, uint16_t data)
+{
+	uint8_t buff[32];
+
+	buff[0] = addr;
+	buff[1] =  cmd;
+	memcpy(&buff[2], &data, 2);
+	buff[4] = crc8_msb(0x07, buff, 4);
+
+	return IICwrite(addr, cmd, &buff[2], 3);
+}
+#endif

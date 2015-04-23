@@ -68,7 +68,7 @@ extern void initialise_monitor_handles(void);
 static char hello[] = "================ System Starts ================";
 static char world[] = "Copyright 2015 Actnova, Inc.";
 
-uint16_t version;
+uint16_t vol,vol1;
 
 int main(void)
 {
@@ -111,9 +111,9 @@ int main(void)
   Scanner_Init();
   PWM_Init();
   ADC_Init();
-//  I2C_Init();
- // Time2_Delay_Init ();
-//  Time2_mDelay(1000);
+  I2C_Init();
+  Time2_Delay_Init ();
+ // Time2_uDelay(1000);
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -128,12 +128,16 @@ int main(void)
 
     Scanner_Handle();
     Battery_Process();
-#if 0
-    if(version==Get_IC_Version())
-    {
-    	printf("LC709203f version is %X\r\n", version);
-    	HAL_Delay(500);
-    }
+
+
+#if 1
+    vol = 0xaa55;
+    LC709203f_Write_Word(LC709203F_ADDAR, CELL_VOLTAGE, vol);
+   // vol1 = Get_IC_Version();
+    printf("LC709203f version is ,%X, %d\r\n", vol, vol);
+    HAL_Delay(1000);
+   // printf("LC709203f version is ,%X, %d\r\n", vol1, vol1);
+ //   	HAL_Delay(1000);
 
 #endif
   }

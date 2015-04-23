@@ -17,6 +17,8 @@
 #define ALARM_VOLTAGE			0x14
 
 uint16_t Get_IC_Version(void);
+uint16_t LC709203f_Read_Word(uint8_t addr, uint8_t cmd);
+bool LC709203f_Write_Word(uint8_t addr, uint8_t cmd, uint16_t data);
 
 #endif
 

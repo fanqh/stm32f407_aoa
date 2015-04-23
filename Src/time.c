@@ -63,7 +63,7 @@ static void Time2_SetTime(uint8_t unit)
   if(unit==TIM_USEC_DELAY)
   {
   	htim2.Init.Prescaler = 84 - 1;	  //1us
-  	htim2.Init.Period = 1-1;			  //1us
+  	htim2.Init.Period = 1;			  //1us
   }
   else if(unit == TIM_MSEC_DELAY)
   {
@@ -72,9 +72,9 @@ static void Time2_SetTime(uint8_t unit)
   }
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim2.Init.RepetitionCounter = 0;
+  htim2.Init.RepetitionCounter = 1;
   HAL_TIM_Base_Init(&htim2);
-
+//  TIM2->CR1 |= TIM_CR1_ARPE;
   sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
   HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig);
   HAL_TIM_Base_Start_IT(&htim2);

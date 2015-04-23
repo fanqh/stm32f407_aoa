@@ -87,7 +87,8 @@ const uint8_t ResNull[] = "NULL";
 const uint8_t ResTimeout[] = "TIMEOUT";
 const uint8_t ResFail[] = "FAIL";
 
-static __ALIGN_BEGIN uint8_t SendBuff[64] __ALIGN_END;
+#define BUFF_SIZE  64
+static __ALIGN_BEGIN uint8_t SendBuff[BUFF_SIZE] __ALIGN_END;
 /*
  * AOA callbacks
  */
@@ -210,7 +211,7 @@ static void Fun_CodeCallBack(USBH_HandleTypeDef *phost)
 		}
 		break;
 	case SCANNER_OK:
-		mencpy(SendBuff, scanner_infor.barcode.code, scanner_infor.barcode.length);
+		memcpy(SendBuff, scanner_infor.barcode.code, scanner_infor.barcode.length);
 		if (USBH_OK != AOA_SendData(phost, SendBuff, (scanner_infor.barcode.length / 4 +1) * 4))
 		{
 			retrydata.len = (scanner_infor.barcode.length / 4 +1) * 4;
@@ -279,7 +280,8 @@ static void Fun_BatVolCallBack(USBH_HandleTypeDef *phost)
 	if(BatteryInfor.vol>600)
 	{
 		snprintf(tmp, 8, "%dmV", BatteryInfor.vol);
-		if(USBH_OK != AOA_SendData(phost, (uint8_t*)tmp, 8))
+		strcpy(SendBuff,tmp);
+		if(USBH_OK != AOA_SendData(phost, (uint8_t*)SendBuff, strlen(SendBuff)))
 		{
 			retrydata.len = 8 ;
 			memcpy(retrydata.temp, tmp, retrydata.len); //retry shold creat a queue
@@ -288,13 +290,14 @@ static void Fun_BatVolCallBack(USBH_HandleTypeDef *phost)
 	}
 	else
 	{
-		AOA_SendData(phost, ResNull, (sizeof(ResNull)/4+1)*4);
+		strcpy(SendBuff,ResNull);
+		AOA_SendData(phost, SendBuff, (strlen(SendBuff)/4+1)*4);
 	}
 }
 static void Fun_BatCapCallBack(USBH_HandleTypeDef *phost)
 {
-
-  if(USBH_OK != AOA_SendData(phost, ResNull, (sizeof(ResNull)/4+1)*4))
+	strcpy(SendBuff,ResNull);
+  if(USBH_OK != AOA_SendData(phost, SendBuff, (strlen(SendBuff)/4+1)*4))
   {
   	retrydata.len = (sizeof(ResNull)/4 +1)*4 ;
   	memcpy(retrydata.temp, ResNull, retrydata.len); //retry shold creat a queue
@@ -307,7 +310,8 @@ static void Fun_BatPctCallBack(USBH_HandleTypeDef *phost)
 	if(BatteryInfor.pct>5)
 	{
 		snprintf(tmp, 8, "%d%%", BatteryInfor.pct);
-		if(USBH_OK != AOA_SendData(phost, (uint8_t*)tmp, 8))
+		strcpy(SendBuff,tmp);
+		if(USBH_OK != AOA_SendData(phost, (uint8_t*)SendBuff, strlen(SendBuff)))
 		{
 			retrydata.len = 8 ;
 			memcpy(retrydata.temp, tmp, retrydata.len); //retry shold creat a queue
@@ -316,7 +320,8 @@ static void Fun_BatPctCallBack(USBH_HandleTypeDef *phost)
 	}
 	else
 	{
-		AOA_SendData(phost, ResNull, (sizeof(ResNull)/4+1)*4);
+		strcpy(SendBuff,ResNull);
+		AOA_SendData(phost, SendBuff, (strlen(SendBuff)/4+1)*4);
 	}
 }
 static void AOA_Receive(USBH_HandleTypeDef *phost, uint8_t * buff, int size)
@@ -324,7 +329,7 @@ static void AOA_Receive(USBH_HandleTypeDef *phost, uint8_t * buff, int size)
 	uint8_t i;
 	AOAFunctionTypDef *pCMDFun;
 //  USBH_StatusTypeDef status;
-
+	memset(SendBuff,0,BUFF_SIZE);
   memmove(aoa_outbuff, buff, size);
   aoa_out_size = size;
 
@@ -339,7 +344,8 @@ static void AOA_Receive(USBH_HandleTypeDef *phost, uint8_t * buff, int size)
   	}
   	pCMDFun++;
   }
-  if(USBH_OK != AOA_SendData(phost, ResNotSupport, (sizeof(ResNotSupport)/4)*4))
+  strcpy(SendBuff,ResNotSupport);
+  if(USBH_OK != AOA_SendData(phost, SendBuff, (strlen(SendBuff)/4)*4))
   {
   	retrydata.len = (sizeof(ResNotSupport)/4)*4 ;
   	memcpy(retrydata.temp, ResNotSupport, retrydata.len); //retry shold creat a queue
