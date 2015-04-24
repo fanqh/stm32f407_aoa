@@ -110,7 +110,7 @@ int main(void)
   MX_USART3_UART_Init();
   Scanner_Init();
   PWM_Init();
-  ADC_Init();
+//  ADC_Init();
   I2C_Init();
   Time2_Delay_Init ();
  // Time2_uDelay(1000);
@@ -130,14 +130,27 @@ int main(void)
     Battery_Process();
 
 
-#if 1
-    vol = 0xaa55;
-    LC709203f_Write_Word(LC709203F_ADDAR, CELL_VOLTAGE, vol);
-   // vol1 = Get_IC_Version();
-    printf("LC709203f version is ,%X, %d\r\n", vol, vol);
-    HAL_Delay(1000);
-   // printf("LC709203f version is ,%X, %d\r\n", vol1, vol1);
- //   	HAL_Delay(1000);
+#if 0
+		vol = 0xaa55;
+		if (LC709203f_Read_Word(LC709203F_ADDAR, 0x09, &vol) == true)
+		{
+			printf(" 1. read data: %d\r\n", vol);
+		}
+		else
+		{
+			printf("read erro\r\n");
+		}
+//		LC709203f_Write_Word(LC709203F_ADDAR, 0x06, 0x3456);
+//		if (LC709203f_Read_Word(LC709203F_ADDAR, 0x09, &vol) == true)
+//		{
+//			printf(" 2. read data: %X\r\n", vol);
+//		}
+//		else
+//		{
+//			printf("read is erro\r\n");
+//		}
+		HAL_Delay(1000);
+		HAL_Delay(1000);
 
 #endif
   }

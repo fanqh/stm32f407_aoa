@@ -1,8 +1,8 @@
 #include "adc.h"
 #include "stdio.h"
+#include "lc709203.h"
 
 ADC_HandleTypeDef AdcHandle;
-BatteryTypeDef BatteryInfor;
 void ADC_Init(void)
 {
 	ADC_ChannelConfTypeDef sConfig;
@@ -59,10 +59,13 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
 	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 }
+#if 0
 void Battery_Process(void)
 {
-	if (BatteryInfor.timeCount % 1000 == 0)
+	uint16_t vol, rsoc, fg;
+	if (BatteryInfor.timeCount % 3000 == 0)
 	{
+
 		HAL_ADC_Start(&AdcHandle);
 		HAL_ADC_PollForConversion(&AdcHandle, 10);
 		if (HAL_ADC_GetState(&AdcHandle) == HAL_ADC_STATE_EOC_REG)
@@ -70,9 +73,9 @@ void Battery_Process(void)
 			/*##-5- Get the converted value of regular channel #######################*/
 			BatteryInfor.vol = 3300 * HAL_ADC_GetValue(&AdcHandle) / 4096 *2;
 			BatteryInfor.pct = BatteryInfor.vol * 100 / 4200;
-
 //			printf("vol = %d, pct= %d\r\n", BatteryInfor.vol, BatteryInfor.pct);
 		}
 	}
 }
 
+#endif

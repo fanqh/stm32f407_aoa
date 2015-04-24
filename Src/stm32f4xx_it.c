@@ -36,7 +36,7 @@
 #include "stm32f4xx.h"
 #include "stm32f4xx_it.h"
 #include "scan.h"
-#include "adc.h"
+#include "lc709203.h"
 #include "gpio.h"
 
 /* External variables --------------------------------------------------------*/

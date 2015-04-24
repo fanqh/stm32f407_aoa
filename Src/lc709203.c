@@ -1,4 +1,9 @@
 #include "lc709203.h"
+#include "string.h"
+
+
+BatteryTypeDef BatteryInfor;
+
 
 #if 0
 uint16_t Get_IC_Version(void)
@@ -57,16 +62,36 @@ unsigned char crc8_msb(unsigned char poly, unsigned char* data, int size)
 	return crc;
 }
 
-uint16_t LC709203f_Read_Word(uint8_t addr, uint8_t cmd)
+bool LC709203f_Read_Word(uint8_t addr, uint8_t cmd, uint16_t* p)
 {
 	struct{
 		uint16_t read;
 		uint8_t  crc;
 
 	}data;
+	uint8_t buff[5];
+	uint8_t crc;
+	bool ret = false;
+
+	buff[0] = addr;
+	buff[1] = cmd;
+	buff[2] = addr+1;
 	if(IICread(LC709203F_ADDAR, cmd, (uint8_t*)&data, 3)==false)
+	{
+		ret = false;
 		IIC_Stop();          //½áÊø×ÜÏß
-	return (data.read);
+	}
+	else
+	{
+		memcpy(&buff[3], (uint8_t*) &data, 2);
+		crc = crc8_msb(0x07, buff, 5);
+		if(crc==data.crc)
+		{
+			*p = data.read;
+			ret = true;
+		}
+	}
+	return ret;
 }
 
 bool LC709203f_Write_Word(uint8_t addr, uint8_t cmd, uint16_t data)
@@ -75,9 +100,35 @@ bool LC709203f_Write_Word(uint8_t addr, uint8_t cmd, uint16_t data)
 
 	buff[0] = addr;
 	buff[1] =  cmd;
-	memcpy(&buff[2], &data, 2);
+	memcpy(&buff[2], (uint8_t*)&data, 2);
 	buff[4] = crc8_msb(0x07, buff, 4);
 
 	return IICwrite(addr, cmd, &buff[2], 3);
 }
 #endif
+
+
+void Battery_Process(void)
+{
+	uint16_t vol, rsoc, fg;
+	if (BatteryInfor.timeCount % 3000 == 0)
+	{
+		if (LC709203f_Read_Word(LC709203F_ADDAR, CELL_VOLTAGE, &vol) == true)
+			 BatteryInfor.vol = vol;
+		if (LC709203f_Read_Word(LC709203F_ADDAR, RSOC, &rsoc) == true)
+			 BatteryInfor.pct = rsoc;
+		if (LC709203f_Read_Word(LC709203F_ADDAR, FG_UNIT, &fg) == true)
+			 BatteryInfor.cap = fg;
+
+	}
+}
+
+
+
+
+
+
+
+
+
+

@@ -16,8 +16,17 @@
 #define ALARM_RSOC				0x13
 #define ALARM_VOLTAGE			0x14
 
+typedef struct
+{
+	uint16_t timeCount;
+	uint16_t vol;
+	uint16_t cap;
+	uint16_t pct;
+}BatteryTypeDef;
+
+extern BatteryTypeDef BatteryInfor;
 uint16_t Get_IC_Version(void);
-uint16_t LC709203f_Read_Word(uint8_t addr, uint8_t cmd);
+bool LC709203f_Read_Word(uint8_t addr, uint8_t cmd, uint16_t* p);
 bool LC709203f_Write_Word(uint8_t addr, uint8_t cmd, uint16_t data);
 
 #endif
